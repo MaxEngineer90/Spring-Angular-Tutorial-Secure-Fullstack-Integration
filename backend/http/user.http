@@ -1,0 +1,2 @@
+GET {{serverUrl}}/users/user
+Authorization: Bearer {{$auth.token("tutorial")}}

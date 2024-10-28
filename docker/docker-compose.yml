@@ -1,0 +1,48 @@
+version: '3.9'
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0.6
+    container_name: keycloak
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_PROXY_HEADERS: xforwarded
+      KC_HTTP_ENABLED: true
+      KC_HOSTNAME_STRICT: false
+      KC_HOSTNAME_URL: http://localhost
+    command: [ 'start', '--import-realm' ]
+    volumes:
+      - ./keycloak/:/opt/keycloak/data/import:ro
+      - ./keycloak/themes:/opt/keycloak/themes
+    restart: always
+    networks:
+      - local
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "https://localhost/auth" ]
+      interval: 300s
+      timeout: 10s
+      retries: 5
+
+  nginx:
+    image: nginx:${NGINX_VERSION:-latest}
+    environment:
+      KEYCLOAK_DOMAIN: ${KEYCLOAK_DOMAIN}
+    container_name: nginx
+    volumes:
+      - ./nginx/templates:/etc/nginx/templates
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    ports:
+      - 80:80
+      - 443:443
+    restart: always
+    networks:
+      - local
+
+volumes:
+  letsencrypt:
+
+networks:
+  local:
+    driver: bridge
