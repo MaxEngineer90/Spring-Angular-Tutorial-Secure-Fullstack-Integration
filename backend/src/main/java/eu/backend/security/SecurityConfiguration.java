@@ -1,16 +1,19 @@
 package eu.backend.security;
 
+import eu.backend.filter.NonceFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
-import org.springframework.security.authentication.AbstractAuthenticationToken;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.XXssProtectionHeaderWriter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -26,19 +29,29 @@ public class SecurityConfiguration {
 
     private final ErrorHandler errorHandler;
     private final Converter<Jwt, AbstractAuthenticationToken> authenticationTokenConverter;
+    private final NonceFilter nonceFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(final HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers(new AntPathRequestMatcher("/api/v1/hello-world")).permitAll()
+                        .requestMatchers(new AntPathRequestMatcher("/api/v1/greetings/*")).permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(e -> e.authenticationEntryPoint(errorHandler))
-                .oauth2ResourceServer(
-                        httpSecurityOAuth2ResourceServerConfigurer ->
-                                httpSecurityOAuth2ResourceServerConfigurer.jwt(
-                                        jwtConfigurer -> jwtConfigurer.jwtAuthenticationConverter(authenticationTokenConverter)));
+                .oauth2ResourceServer(oauth2 -> oauth2.jwt(
+                        jwtConfigurer -> jwtConfigurer.jwtAuthenticationConverter(authenticationTokenConverter)))
+                .addFilterBefore(nonceFilter, UsernamePasswordAuthenticationFilter.class)
+                .headers(headers -> {
+                    headers.xssProtection(xss -> xss.headerValue(XXssProtectionHeaderWriter.HeaderValue.ENABLED));
+                    headers.addHeaderWriter((request, response) ->
+                            response.setHeader("X-Content-Type-Options", "nosniff"));
+                    headers.addHeaderWriter((request, response) ->
+                            response.setHeader("X-Frame-Options", "DENY"));
+                    headers.contentSecurityPolicy(csp ->
+                            csp.policyDirectives("script-src 'self' 'nonce-" + nonceFilter.generateNonce() + "'; object-src 'none'; frame-ancestors 'none'"));
+                });
+
         return http.build();
     }
 

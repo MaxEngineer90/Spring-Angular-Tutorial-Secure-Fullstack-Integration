@@ -23,6 +23,10 @@ repositories {
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("javax.servlet:javax.servlet-api:4.0.1")
+    implementation("org.springframework.security:spring-security-web")
+    implementation("org.springframework.security:spring-security-config")
+    implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")

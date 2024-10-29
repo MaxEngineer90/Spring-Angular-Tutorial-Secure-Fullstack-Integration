@@ -1,0 +1,2 @@
+GET {{serverUrl}}/nonce
+Authorization: Bearer {{$auth.token("tutorial")}}

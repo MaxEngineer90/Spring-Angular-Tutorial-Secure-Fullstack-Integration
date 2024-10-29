@@ -1,4 +1,4 @@
-package eu.backend.controller;
+package eu.backend.controller.user;
 
 import eu.backend.dto.UserDTO;
 import eu.backend.service.UserService;
